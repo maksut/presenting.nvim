@@ -40,6 +40,8 @@ Presenting.config = {
   options = {
     -- The width of the slide buffer.
     width = 60,
+    -- Show the presented file's name in the footer instead of "presenting.nvim".
+    footer_filename = false,
   },
   separator = {
     -- Separators for different filetypes.
@@ -114,8 +116,15 @@ Presenting.start = function(separator)
     return
   end
 
+  local footer_title = "presenting.nvim"
+  if Presenting.config.options.footer_filename then
+    local filename = vim.fn.expand("%:t")
+    if filename ~= "" then footer_title = filename end
+  end
+
   Presenting._state = {
     filetype = filetype,
+    footer_title = footer_title,
     slides = {},
     slide = 1,
     n_slides = nil,
@@ -308,6 +317,12 @@ H.create_slide_view = function(state)
   Presenting.config.configure_slide_buffer(state.slide_buf)
   H.set_slide_keymaps(state.slide_buf, Presenting.config.keymaps)
 
+  -- Floating windows use `NormalFloat` by default, which many colorschemes
+  -- style differently from `Normal`. Use the regular editor colors instead.
+  for _, win in ipairs({ state.background_win, state.footer_win, state.slide_win }) do
+    vim.wo[win].winhighlight = "NormalFloat:Normal"
+  end
+
   H.set_slide_content(state, 1)
 end
 
@@ -391,7 +406,7 @@ H.set_slide_content = function(state, slide)
   )
   vim.api.nvim_buf_set_option(state.slide_buf, "modifiable", orig_modifiable)
 
-  local footer_text = "presenting.nvim | " .. state.slide .. "/" .. state.n_slides
+  local footer_text = state.footer_title .. " | " .. state.slide .. "/" .. state.n_slides
   vim.api.nvim_buf_set_lines(state.footer_buf, 0, -1, false, { footer_text })
 end
 
